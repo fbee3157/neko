@@ -78,6 +78,34 @@
 - **Google Fonts** — ZCOOL QingKe HuangYou / Press Start 2P / Noto Sans SC
 
 ---
+# 📸 游戏截图
 
+
+
+
+游戏主界面	判定成功	游戏结束
+主界面	游戏中	结算
+
+
+# 🔧 自定义修改
+
+修改 `index.html` 中的常量即可调整游戏参数：
+
+``
+const BPM = 90;          // 节奏速度（建议 80-120）
+const TIMER_INIT = 15000; // 初始时间（毫秒）
+const TIMER_BONUS = 200;  // 每次成功奖励时间（毫秒）
+const GOAL = 30;          // 游戏目标根数
+const NIC_MG = 1.2;       // 每根香烟尼古丁含量（mg）
+const BPM = 90;          // 节奏速度（建议 80-120）
+const TIMER_INIT = 15000; // 初始时间（毫秒）
+const TIMER_BONUS = 200;  // 每次成功奖励时间（毫秒）
+const GOAL = 30;          // 游戏目标根数
+const NIC_MG = 1.2;       // 每根香烟尼古丁含量（mg）
+``
+
+⚠️ 免责声明
+
+本项目纯属创意娱乐，不鼓励、不美化吸烟行为。游戏内含随机健康警示标语。吸烟有害健康，戒烟可减少对健康的危害。
 
 
