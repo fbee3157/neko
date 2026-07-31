@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>尼古喵喵 - 节奏吸烟</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=ZCOOL+QingKe+HuangYou&family=Press+Start+2P&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0808;touch-action:none;-webkit-user-select:none;user-select:none;font-family:'Noto Sans SC',sans-serif}
+canvas{display:block;width:100%;height:100%}
+#hud{position:fixed;top:0;left:0;right:0;display:none;justify-content:space-between;align-items:flex-start;padding:20px 28px;z-index:10;pointer-events:none}
+#score-box{font-family:'ZCOOL QingKe HuangYou',sans-serif;font-size:22px;color:#f0e8d8;text-shadow:0 0 12px rgba(255,100,0,.4);transition:color .4s}
+#score-box .num{font-family:'Press Start 2P',monospace;font-size:20px;display:inline-block;min-width:30px;text-align:center}
+#timer-box{font-family:'Press Start 2P',monospace;font-size:18px;color:#ff8c00;text-shadow:0 0 10px rgba(255,140,0,.3)}
+#timer-box.warn{color:#ff3333;animation:timerPulse .5s ease infinite}
+@keyframes timerPulse{0%,100%{opacity:1}50%{opacity:.5}}
+#bottom-bar{position:fixed;bottom:0;left:0;right:0;display:none;flex-direction:column;align-items:center;padding:16px 20px 22px;z-index:10;pointer-events:none;background:linear-gradient(transparent,rgba(0,0,0,.6))}
+#nicotine{font-size:13px;color:#9a8e7e;margin-bottom:6px}
+#nicotine .val{font-family:'Press Start 2P',monospace;font-size:12px;color:#ff8c00}
+#warning{font-size:14px;color:#cc4444;text-align:center;font-weight:700;letter-spacing:1px;min-height:20px;opacity:.85}
+#combo{position:fixed;top:50%;left:50%;transform:translate(-50%,-140px);font-family:'ZCOOL QingKe HuangYou',sans-serif;font-size:28px;color:#ff8c00;text-shadow:0 0 15px rgba(255,140,0,.5);z-index:10;pointer-events:none;opacity:0;transition:opacity .15s}
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:100;flex-direction:column}
+#start-screen{background:radial-gradient(ellipse at center,rgba(30,15,5,.95),rgba(10,8,8,.98))}
+#start-screen h1{font-family:'ZCOOL QingKe HuangYou',sans-serif;font-size:clamp(48px,12vw,80px);color:#ff8c00;text-shadow:0 0 40px rgba(255,100,0,.6),0 0 80px rgba(255,60,0,.3);margin-bottom:8px;letter-spacing:6px}
+#start-screen .sub{font-size:16px;color:#8a7e6e;margin-bottom:10px}
+#start-screen .hint{font-size:13px;color:#5a5040;margin-bottom:36px}
+.game-btn{font-family:'ZCOOL QingKe HuangYou',sans-serif;font-size:22px;color:#f0e8d8;background:linear-gradient(135deg,#c85000,#ff6b00);border:none;padding:14px 48px;border-radius:8px;cursor:pointer;letter-spacing:3px;box-shadow:0 4px 20px rgba(255,100,0,.4);transition:transform .15s,box-shadow .15s}
+.game-btn:hover{transform:scale(1.05);box-shadow:0 6px 30px rgba(255,100,0,.6)}
+.game-btn:active{transform:scale(.97)}
+#end-screen{background:rgba(10,8,8,.92);display:none}
+#end-screen .content{text-align:center}
+#end-screen h2{font-family:'ZCOOL QingKe HuangYou',sans-serif;font-size:clamp(36px,9vw,56px);margin-bottom:16px;letter-spacing:4px}
+#end-screen .sub2{font-size:15px;color:#8a7e6e;margin-bottom:8px}
+#end-screen .stat{font-family:'Press Start 2P',monospace;font-size:13px;color:#9a8e7e;margin-bottom:6px}
+#end-screen .warn2{font-size:14px;color:#cc4444;margin:18px 0 28px;font-weight:700}
+.rainbow{background:linear-gradient(90deg,#ff0000,#ff8800,#ffff00,#00ff00,#0088ff,#8800ff,#ff0088);background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:rainbowMove 2s linear infinite}
+@keyframes rainbowMove{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+.golden{color:#ffcc00;text-shadow:0 0 25px rgba(255,200,0,.5)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div id="score-box">已过肺 <span class="num" id="sNum">0</span> 根</div>
+  <div id="timer-box"><span id="tNum">15.0</span>s</div>
+</div>
+
+<div id="bottom-bar">
+  <div id="nicotine">尼古丁摄入: <span class="val" id="nNum">0.0</span> mg</div>
+  <div id="warning">吸烟有害健康</div>
+</div>
+
+<div id="combo"></div>
+
+<div id="start-screen" class="overlay">
+  <h1>尼古喵喵</h1>
+  <p class="sub">♪ 节奏吸烟模拟器 ♪</p>
+  <p class="hint">火花燃到烟尾时 点击/敲击屏幕</p>
+  <button class="game-btn" id="btnStart">开 始 游 戏</button>
+</div>
+
+<div id="end-screen" class="overlay">
+  <div class="content">
+    <h2 id="eTitle"></h2>
+    <p class="sub2" id="eSub"></p>
+    <p class="stat" id="eScore"></p>
+    <p class="stat" id="eNic"></p>
+    <p class="warn2" id="eWarn"></p>
+    <button class="game-btn" id="btnRestart">再 来 一 根</button>
+  </div>
+</div>
+
+<script>
+// ========== CONSTANTS ==========
+const BPM=90, BEAT_MS=60000/BPM;
+const TIMER_INIT=15000, TIMER_BONUS=200, GOAL=30;
+const JUDGE_PCT=0.72, NIC_MG=1.2;
+const PAUSE_MS=180;
+
+const WARNINGS=[
+"吸烟有害健康，尽早戒烟有益健康",
+"每一口烟都在伤害你的肺",
+"尼古丁正在侵蚀你的血管",
+"你的肺泡正在一个个死去",
+"每支烟减少约11分钟寿命",
+"二手烟同样伤害你的家人",
+"焦油正在填满你的肺泡",
+"吸烟让你的皮肤加速老化",
+"香烟中超过70种物质可致癌",
+"今天就试着少抽一根吧",
+"你的牙齿正在变黄",
+"心血管疾病正在靠近"];
+
+// ========== STATE ==========
+let state='menu', score=0, timerMs=TIMER_INIT, combo=0, maxCombo=0;
+let beatStart=0, judged=false, emberP=0, paused=false, pauseT=0;
+let particles=[], feedbackT=0, feedbackTxt='', feedbackCol='#fff';
+let lastFrame=0, bgPulse=0;
+let currentWarn=WARNINGS[0], warnTimer=0;
+
+// ========== AUDIO ==========
+let ac;
+function initAudio(){ac=new(window.AudioContext||window.webkitAudioContext)()}
+function ensureAudio(){if(!ac)initAudio();if(ac&&ac.state==='suspended')ac.resume()}
+
+function sndTick(){
+  if(!ac)return;const t=ac.currentTime;
+  const o=ac.createOscillator(),g=ac.createGain();
+  o.type='sine';o.frequency.value=880;
+  g.gain.setValueAtTime(.08,t);g.gain.exponentialRampToValueAtTime(.001,t+.03);
+  o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+.03);
+}
+function sndHit(){
+  if(!ac)return;const t=ac.currentTime;
+  const o1=ac.createOscillator(),g1=ac.createGain();
+  o1.type='triangle';o1.frequency.value=1200;
+  g1.gain.setValueAtTime(.25,t);g1.gain.exponentialRampToValueAtTime(.001,t+.12);
+  o1.connect(g1);g1.connect(ac.destination);o1.start(t);o1.stop(t+.12);
+  const o2=ac.createOscillator(),g2=ac.createGain();
+  o2.type='sine';o2.frequency.value=1600;
+  g2.gain.setValueAtTime(.12,t+.04);g2.gain.exponentialRampToValueAtTime(.001,t+.18);
+  o2.connect(g2);g2.connect(ac.destination);o2.start(t+.04);o2.stop(t+.18);
+}
+function sndMiss(){
+  if(!ac)return;const t=ac.currentTime;
+  const o=ac.createOscillator(),g=ac.createGain();
+  o.type='sawtooth';o.frequency.value=180;
+  g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.2);
+  o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+.2);
+}
+function sndInhale(){
+  if(!ac)return;const t=ac.currentTime;
+  const len=ac.sampleRate*.15,buf=ac.createBuffer(1,len,ac.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,1.5);
+  const s=ac.createBufferSource();s.buffer=buf;
+  const f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=2500;f.Q.value=.8;
+  const g=ac.createGain();g.gain.value=.18;
+  s.connect(f);f.connect(g);g.connect(ac.destination);s.start(t);
+}
+function sndEnd(success){
+  if(!ac)return;const t=ac.currentTime;
+  if(success){[0,.1,.2].forEach((d,i)=>{const o=ac.createOscillator(),g=ac.createGain();
+    o.type='sine';o.frequency.value=[523,659,784][i];
+    g.gain.setValueAtTime(.2,t+d);g.gain.exponentialRampToValueAtTime(.001,t+d+.3);
+    o.connect(g);g.connect(ac.destination);o.start(t+d);o.stop(t+d+.3)})}
+  else{const o=ac.createOscillator(),g=ac.createGain();
+    o.type='sine';o.frequency.value=300;
+    g.gain.setValueAtTime(.15,t);g.gain.exponentialRampToValueAtTime(.001,t+.5);
+    o.frequency.linearRampToValueAtTime(150,t+.5);
+    o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+.5)}
+}
+
+// ========== CANVAS ==========
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+let W,H;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight}
+window.addEventListener('resize',resize);resize();
+
+// ========== PARTICLES ==========
+class P{
+  constructor(x,y,tp){
+    this.x=x;this.y=y;this.tp=tp;this.life=1;
+    if(tp==='smoke'){this.vx=(Math.random()-.5)*.6;this.vy=-Math.random()*1.8-.4;
+      this.dec=.006+Math.random()*.008;this.sz=4+Math.random()*10}
+    else if(tp==='spark'){this.vx=(Math.random()-.5)*4;this.vy=-Math.random()*4-1;
+      this.dec=.04+Math.random()*.04;this.sz=1+Math.random()*2.5}
+    else if(tp==='confetti'){this.vx=(Math.random()-.5)*10;this.vy=-Math.random()*10-3;
+      this.dec=.006+Math.random()*.008;this.sz=3+Math.random()*6;
+      this.hue=Math.random()*360;this.rot=Math.random()*6.28}
+    else if(tp==='hit'){this.vx=(Math.random()-.5)*6;this.vy=(Math.random()-.5)*6;
+      this.dec=.05+Math.random()*.04;this.sz=2+Math.random()*3}
+  }
+  update(){this.x+=this.vx;this.y+=this.vy;this.life-=this.dec;
+    if(this.tp==='smoke'){this.vx*=.99;this.sz*=1.012}
+    else if(this.tp==='spark'||this.tp==='hit'){this.vy+=.08}
+    else if(this.tp==='confetti'){this.vy+=.12;this.rot+=.08}
+  }
+  draw(c){
+    if(this.life<=0)return;
+    c.save();c.globalAlpha=Math.max(0,this.life);
+    if(this.tp==='smoke'){c.fillStyle=`rgba(160,155,145,${this.life*.25})`;
+      c.beginPath();c.arc(this.x,this.y,this.sz,0,6.28);c.fill()}
+    else if(this.tp==='spark'||this.tp==='hit'){
+      c.fillStyle=`rgba(255,${Math.floor(80+this.life*160)},0,${this.life})`;
+      c.beginPath();c.arc(this.x,this.y,this.sz,0,6.28);c.fill()}
+    else if(this.tp==='confetti'){c.translate(this.x,this.y);c.rotate(this.rot);
+      c.fillStyle=`hsla(${this.hue},85%,60%,${this.life})`;
+      c.fillRect(-this.sz/2,-this.sz/2,this.sz,this.sz)}
+    c.restore();
+  }
+}
+
+// ========== DRAWING HELPERS ==========
+function drawEmber(x,y,pulse){
+  const s=1+Math.sin(performance.now()*.008)*.15+pulse*.3;
+  // outer glow
+  let g=ctx.createRadialGradient(x,y,0,x,y,28*s);
+  g.addColorStop(0,'rgba(255,80,0,.45)');g.addColorStop(.5,'rgba(255,40,0,.12)');g.addColorStop(1,'rgba(255,0,0,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,28*s,0,6.28);ctx.fill();
+  // inner
+  g=ctx.createRadialGradient(x,y,0,x,y,11*s);
+  g.addColorStop(0,'#ffdd44');g.addColorStop(.4,'#ff6600');g.addColorStop(1,'#cc2200');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,11*s,0,6.28);ctx.fill();
+  // core
+  ctx.fillStyle='#fff8dd';ctx.beginPath();ctx.arc(x,y,3.5*s,0,6.28);ctx.fill();
+}
+
+function drawCigarette(x,y,len,ep,glow){
+  const fL=len*.22,fE=x+fL,eX=x+len;
+  const emX=eX-ep*(eX-fE);
+  // filter
+  ctx.fillStyle='#c8a060';
+  ctx.beginPath();ctx.moveTo(x+3,y-6);ctx.lineTo(x+fL,y-6);ctx.lineTo(x+fL,y+6);ctx.lineTo(x+3,y+6);
+  ctx.quadraticCurveTo(x,y+6,x,y);ctx.quadraticCurveTo(x,y-6,x+3,y-6);ctx.fill();
+  ctx.fillStyle='#b08840';ctx.fillRect(x+fL-3,y-6,2,12);
+  // white paper
+  if(emX>fE){ctx.fillStyle='#f2ede4';ctx.fillRect(fE,y-5,emX-fE,10)}
+  // burned
+  if(eX>emX){const gg=ctx.createLinearGradient(emX,0,eX,0);
+    gg.addColorStop(0,'#aaa');gg.addColorStop(.4,'#888');gg.addColorStop(1,'#666');
+    ctx.fillStyle=gg;ctx.fillRect(emX,y-5,eX-emX,10);
+    ctx.strokeStyle='rgba(100,95,90,.4)';ctx.lineWidth=.5;
+    for(let i=emX+12;i<eX;i+=14){ctx.beginPath();ctx.moveTo(i,y-5);ctx.lineTo(i,y+5);ctx.stroke()}}
+  // ember
+  drawEmber(emX,y,glow);
+  // judgment zone indicator
+  if(glow>0){ctx.save();ctx.globalAlpha=glow*.5;
+    const zg=ctx.createRadialGradient(fE,y,0,fE,y,25);
+    zg.addColorStop(0,'rgba(0,255,120,.6)');zg.addColorStop(1,'rgba(0,255,120,0)');
+    ctx.fillStyle=zg;ctx.beginPath();ctx.arc(fE,y,25,0,6.28);ctx.fill();ctx.restore()}
+  return{x:emX,y};
+}
+
+function drawCat(cx,cy,s){
+  ctx.save();ctx.translate(cx,cy);
+  // head
+  ctx.fillStyle='#1c1c1e';ctx.beginPath();ctx.arc(0,0,s*.48,0,6.28);ctx.fill();
+  // ears
+  ctx.fillStyle='#1c1c1e';
+  [[-1,0],[1,0]].forEach(([d])=>{
+    ctx.beginPath();ctx.moveTo(d*s*.42,-s*.15);ctx.lineTo(d*s*.24,-s*.65);ctx.lineTo(d*s*.04,-s*.2);ctx.closePath();ctx.fill();
+  });
+  // inner ears
+  ctx.fillStyle='#3a1a1a';
+  [[-1,0],[1,0]].forEach(([d])=>{
+    ctx.beginPath();ctx.moveTo(d*s*.37,-s*.18);ctx.lineTo(d*s*.24,-s*.53);ctx.lineTo(d*s*.11,-s*.22);ctx.closePath();ctx.fill();
+  });
+  // eyes
+  [[-1,0],[1,0]].forEach(([d])=>{
+    ctx.save();ctx.translate(d*s*.18,-s*.04);
+    ctx.fillStyle='#111';ctx.beginPath();ctx.ellipse(0,0,s*.1,s*.065,0,0,6.28);ctx.fill();
+    ctx.fillStyle='#d4a800';ctx.beginPath();ctx.ellipse(0,0,s*.065,s*.065,0,0,6.28);ctx.fill();
+    ctx.fillStyle='#111';ctx.beginPath();ctx.ellipse(0,0,s*.015,s*.058,0,0,6.28);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.45)';ctx.beginPath();ctx.arc(s*.02,-s*.02,s*.015,0,6.28);ctx.fill();
+    // heavy lid
+    ctx.fillStyle='#1c1c1e';ctx.beginPath();
+    ctx.moveTo(-s*.12,-s*.01);ctx.lineTo(s*.12,-s*.01);
+    ctx.quadraticCurveTo(s*.08,s*.015,0,s*.005);
+    ctx.quadraticCurveTo(-s*.08,s*.015,-s*.12,-s*.01);ctx.fill();
+    ctx.restore();
+  });
+  // nose
+  ctx.fillStyle='#ff8888';ctx.beginPath();
+  ctx.moveTo(0,s*.08);ctx.lineTo(-s*.032,s*.12);ctx.lineTo(s*.032,s*.12);ctx.closePath();ctx.fill();
+  // mouth
+  ctx.strokeStyle='#3a3a3a';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(0,s*.12);ctx.quadraticCurveTo(s*.12,s*.16,s*.22,s*.13);ctx.stroke();
+  // whiskers
+  ctx.strokeStyle='#4a4a4a';ctx.lineWidth=1;
+  [-1,1].forEach(d=>{
+    for(let i=-1;i<=1;i++){
+      ctx.beginPath();ctx.moveTo(d*s*.1,s*.11+i*s*.025);
+      ctx.lineTo(d*s*.46,s*.08+i*s*.045);ctx.stroke()}
+  });
+  ctx.restore();
+}
+
+// ========== GAME LOGIC ==========
+function startGame(){
+  ensureAudio();
+  state='playing';score=0;timerMs=TIMER_INIT;combo=0;maxCombo=0;
+  judged=false;paused=false;emberP=0;particles=[];feedbackT=0;
+  beatStart=performance.now();warnTimer=0;
+  document.getElementById('start-screen').style.display='none';
+  document.getElementById('end-screen').style.display='none';
+  document.getElementById('hud').style.display='flex';
+  document.getElementById('bottom-bar').style.display='flex';
+}
+
+function nextBeat(ts){beatStart=ts;judged=false;paused=false;sndTick();bgPulse=1}
+
+function onSuccess(){
+  score++;combo++;if(combo>maxCombo)maxCombo=combo;
+  timerMs+=TIMER_BONUS;judged=true;paused=true;pauseT=performance.now();
+  sndHit();sndInhale();
+  feedbackTxt=combo>=3?`x${combo} 过肺!`:'吸入!';
+  feedbackCol='#00ff88';feedbackT=40;
+  warnTimer++;
+  if(warnTimer%4===0)currentWarn=WARNINGS[Math.floor(Math.random()*WARNINGS.length)];
+  updateHUD();
+  if(score>=GOAL){setTimeout(()=>endGame(true),300);return}
+  // hit particles
+  for(let i=0;i<12;i++)particles.push(new P(W/2,H/2,'hit'));
+}
+
+function onMiss(){
+  combo=0;judged=true;paused=true;pauseT=performance.now();
+  sndMiss();feedbackTxt='MISS';feedbackCol='#ff4444';feedbackT=35;
+}
+
+function handleClick(ts){
+  if(state!=='playing'||judged)return;
+  const elapsed=ts-beatStart;
+  if(elapsed/BEAT_MS>=JUDGE_PCT){onSuccess()}
+  else{onMiss()}
+}
+
+function endGame(success){
+  state=success?'success':'fail';
+  document.getElementById('hud').style.display='none';
+  document.getElementById('bottom-bar').style.display='none';
+  document.getElementById('combo').style.opacity='0';
+  sndEnd(success);
+  const es=document.getElementById('end-screen');
+  const et=document.getElementById('eTitle');
+  es.style.display='flex';
+  et.textContent=`已上瘾 ${score} 根`;
+  et.className=success?'rainbow':'golden';
+  document.getElementById('eSub').textContent=success?'尼古喵喵大师，你的肺已经离不开它了':'时间到！还不够上头吗？';
+  document.getElementById('eScore').style.color=success?'#00ff88':'#ffcc00';
+  document.getElementById('eScore').textContent=`最高连击: ${maxCombo}`;
+  document.getElementById('eNic').textContent=`摄入尼古丁: ${(score*NIC_MG).toFixed(1)} mg`;
+  document.getElementById('eWarn').textContent=WARNINGS[Math.floor(Math.random()*WARNINGS.length)];
+  if(success)for(let i=0;i<60;i++)setTimeout(()=>particles.push(new P(W*.2+Math.random()*W*.6,H*.3+Math.random()*H*.3,'confetti')),i*30);
+}
+
+function updateHUD(){
+  document.getElementById('sNum').textContent=score;
+  document.getElementById('tNum').textContent=(Math.max(0,timerMs)/1000).toFixed(1);
+  document.getElementById('nNum').textContent=(score*NIC_MG).toFixed(1);
+  document.getElementById('warning').textContent=currentWarn;
+  const sb=document.getElementById('score-box');
+  if(score>=10){const r=Math.min((score-10)/20,1);
+    sb.style.color=`rgb(255,${Math.floor(240*(1-r))},${Math.floor(220*(1-r))})`}
+  else sb.style.color='#f0e8d8';
+  const tb=document.getElementById('timer-box');
+  tb.className=timerMs<3000?'warn':'';
+  // combo
+  const ce=document.getElementById('combo');
+  if(combo>=2&&state==='playing'){ce.textContent=`x${combo}`;ce.style.opacity='1'}
+  else ce.style.opacity='0';
+}
+
+// ========== INPUT ==========
+cv.addEventListener('mousedown',e=>{e.preventDefault();handleClick(performance.now())});
+cv.addEventListener('touchstart',e=>{e.preventDefault();handleClick(performance.now())});
+document.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='KeyF'){e.preventDefault();handleClick(performance.now())}});
+document.getElementById('btnStart').addEventListener('click',startGame);
+document.getElementById('btnRestart').addEventListener('click',startGame);
+
+// ========== MAIN LOOP ==========
+function loop(ts){
+  const dt=ts-lastFrame;lastFrame=ts;
+  ctx.clearRect(0,0,W,H);
+
+  // BG
+  bgPulse*=.92;
+  const bg=ctx.createRadialGradient(W*.4,H*.35,0,W*.5,H*.5,W*.75);
+  bg.addColorStop(0,`rgba(${25+bgPulse*40},12,10,1)`);bg.addColorStop(1,'#0a0808');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+  // Smoke ambient
+  if(state==='playing'&&Math.random()<.08)particles.push(new P(W*.3+Math.random()*W*.4,H*.3+Math.random()*H*.2,'smoke'));
+
+  if(state==='playing'){
+    // Timer
+    timerMs-=dt;
+    if(timerMs<=0){timerMs=0;endGame(false);updateHUD()}
+    // Beat logic
+    if(!paused){
+      const elapsed=ts-beatStart;
+      emberP=Math.min(elapsed/BEAT_MS,1);
+      // ember particles
+      const sc=Math.min(W,H)/700;
+      const catX=W/2-25*sc, catY=H*.42, catS=260*sc;
+      const cigX=catX+catS*.24, cigY=catY+catS*.14, cigLen=Math.min(W*.38,280*sc);
+      const fL=cigLen*.22,fE=cigX+fL,eX=cigX+cigLen;
+      const emX=eX-emberP*(eX-fE);
+      if(Math.random()<.35)particles.push(new P(emX,cigY,'spark'));
+      if(Math.random()<.2)particles.push(new P(emX,cigY-4,'smoke'));
+      // auto-miss
+      if(emberP>=1&&!judged)onMiss();
+    }else{
+      emberP=1;
+      if(ts-pauseT>PAUSE_MS)nextBeat(ts);
+    }
+    updateHUD();
+  }
+
+  // Draw particles (behind)
+  particles=particles.filter(p=>p.life>0);
+  particles.forEach(p=>{p.update();p.draw(ctx)});
+
+  // Draw game elements
+  const sc=Math.min(W,H)/700;
+  const catX=W/2-25*sc, catY=H*.42, catS=260*sc;
+  if(state==='playing'||state==='success'||state==='fail'){
+    drawCat(catX,catY,catS);
+    const cigX=catX+catS*.24, cigY=catY+catS*.14, cigLen=Math.min(W*.38,280*sc);
+    const glowP=(!judged&&emberP>JUDGE_PCT)?(emberP-JUDGE_PCT)/(1-JUDGE_PCT):0;
+    drawCigarette(cigX,cigY,cigLen,emberP,glowP);
+  }
+  if(state==='menu'){
+    drawCat(W/2,H*.42,240*sc);
+  }
+
+  // Feedback text
+  if(feedbackT>0){
+    feedbackT--;
+    ctx.save();ctx.globalAlpha=feedbackT/40;ctx.textAlign='center';
+    ctx.font=`bold ${34+Math.sin((40-feedbackT)*.3)*4}px "ZCOOL QingKe HuangYou"`;
+    ctx.shadowColor=feedbackCol;ctx.shadowBlur=15;
+    ctx.fillStyle=feedbackCol;
+    ctx.fillText(feedbackTxt,W/2,H*.26-feedbackT*.3);
+    ctx.restore();
+  }
+
+  // End screen particles
+  if(state==='success'||state==='fail'){
+    particles.forEach(p=>{if(p.life>0)p.draw(ctx)});
+  }
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
